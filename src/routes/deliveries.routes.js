@@ -1,0 +1,16 @@
+const router = require('express').Router();
+const DeliveriesController = require('../controllers/deliveries.controller');
+const ScanController = require('../controllers/scan.controller');
+const auth = require('../middleware/auth');
+const { asyncHandler } = require('../utils/helpers');
+const { validate, createDeliveryRules, assignDriverRules } = require('../validators/delivery.validator');
+router.post('/',         auth(['merchant']),              createDeliveryRules, validate, asyncHandler(DeliveriesController.create));
+router.get('/',          auth(['merchant','driver','admin']),                  asyncHandler(DeliveriesController.list));
+router.get('/:id',       auth(['merchant','driver','admin']),                  asyncHandler(DeliveriesController.getOne));
+router.post('/:id/assign', auth(['admin','merchant']),   assignDriverRules, validate, asyncHandler(DeliveriesController.assignDriver));
+router.post('/:id/cancel', auth(['merchant','admin']),                         asyncHandler(DeliveriesController.cancel));
+router.post('/scan/pickup',   auth(['driver']), asyncHandler(ScanController.scanPickup));
+router.post('/scan/qr',       auth(['driver']), asyncHandler(ScanController.scanQR));
+router.post('/scan/otp',      auth(['driver']), asyncHandler(ScanController.verifyOTP));
+router.post('/scan/otp/send',                  asyncHandler(ScanController.requestOTP));
+module.exports = router;
