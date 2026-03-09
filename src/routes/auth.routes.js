@@ -1,0 +1,11 @@
+const router = require('express').Router();
+const AuthController = require('../controllers/auth.controller');
+const auth = require('../middleware/auth');
+const { asyncHandler } = require('../utils/helpers');
+const { validate, loginRules, registerMerchantRules, registerDriverRules } = require('../validators/auth.validator');
+router.post('/merchant/login',    loginRules, validate, asyncHandler(AuthController.loginMerchant));
+router.post('/driver/login',      loginRules, validate, asyncHandler(AuthController.loginDriver));
+router.post('/merchant/register', registerMerchantRules, validate, asyncHandler(AuthController.registerMerchant));
+router.post('/driver/register',   registerDriverRules, validate, asyncHandler(AuthController.registerDriver));
+router.get('/me', auth(), asyncHandler(AuthController.me));
+module.exports = router;
