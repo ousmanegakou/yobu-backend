@@ -1,0 +1,17 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const { errorHandler } = require('./middleware/errorHandler');
+const app = express();
+app.use(helmet()); app.use(cors()); app.use(morgan('dev')); app.use(express.json());
+app.get('/health', (req, res) => res.json({ status: 'ok', project: 'YOBU', version: '1.0.0' }));
+app.use('/api/auth',       require('./routes/auth.routes'));
+app.use('/api/deliveries', require('./routes/deliveries.routes'));
+app.use('/api/drivers',    require('./routes/drivers.routes'));
+app.use('/api/merchants',  require('./routes/merchants.routes'));
+app.use('/api/billing',    require('./routes/billing.routes'));
+app.use('/api/tracking',   require('./routes/tracking.routes'));
+app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
+app.use(errorHandler);
+module.exports = app;
