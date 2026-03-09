@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const DriversController = require('../controllers/drivers.controller');
+const auth = require('../middleware/auth');
+const { asyncHandler } = require('../utils/helpers');
+router.get('/',          auth(['admin', 'merchant']), asyncHandler(DriversController.list));
+router.get('/available', auth(['admin', 'merchant']), asyncHandler(DriversController.getAvailable));
+router.get('/:id',       auth(['admin', 'merchant']), asyncHandler(DriversController.getOne));
+router.patch('/status',  auth(['driver']),            asyncHandler(DriversController.updateStatus));
+router.post('/location', auth(['driver']),            asyncHandler(DriversController.updateLocation));
+module.exports = router;
