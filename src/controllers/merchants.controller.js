@@ -1,8 +1,8 @@
-const MerchantModel = require('../models/merchant.model');
-const { sanitizeUser, getPagination } = require('../utils/helpers');
-const MerchantsController = {
-  async list(req, res) { const { limit, offset } = getPagination(req.query); const merchants = await MerchantModel.findAll({ limit, offset }); res.json({ merchants: merchants.map(sanitizeUser), count: merchants.length }); },
-  async getOne(req, res) { const m = await MerchantModel.findById(req.params.id); if (!m) return res.status(404).json({ error: 'Not found' }); res.json(sanitizeUser(m)); },
-  async getStats(req, res) { const id = req.params.id || req.user.id; const stats = await MerchantModel.getStats(id); res.json(stats); },
-};
-module.exports = MerchantsController;
+const db=require('../config/db');
+const {asyncHandler,sanitizeUser}=require('../utils/helpers');
+exports.me=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT * FROM merchants WHERE id=$1',[req.user.id]); res.json(sanitizeUser(rows[0])); });
+exports.update=asyncHandler(async(req,res)=>{ const {name,phone,address}=req.body; const {rows}=await db.query('UPDATE merchants SET name=COALESCE($1,name),phone=COALESCE($2,phone),address=COALESCE($3,address),updated_at=NOW() WHERE id=$4 RETURNING *',[name,phone,address,req.user.id]); res.json(sanitizeUser(rows[0])); });
+exports.deliveries=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT d.*,(SELECT COUNT(*) FROM delivery_stops WHERE delivery_id=d.id) as total_stops FROM deliveries d WHERE d.merchant_id=$1 ORDER BY d.created_at DESC LIMIT 50',[req.user.id]); res.json(rows); });
+exports.stats=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT COUNT(*) FILTER(WHERE status=$1) as delivered,COUNT(*) FILTER(WHERE status=$2) as cancelled,COALESCE(SUM(price) FILTER(WHERE status=$1),0) as revenue FROM deliveries WHERE merchant_id=$3',['delivered','cancelled',req.user.id]); res.json(rows[0]); });
+exports.list=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT id,name,email,phone,created_at FROM merchants ORDER BY created_at DESC'); res.json(rows); });
+exports.getById=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT id,name,email,phone,address,created_at FROM merchants WHERE id=$1',[req.params.id]); if(!rows.length) return res.status(404).json({error:'Not found'}); res.json(rows[0]); });

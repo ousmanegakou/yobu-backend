@@ -1,27 +1,14 @@
-const db = require('../config/db');
-const { calculateInvoice } = require('../services/pricing');
-const { getMonthRange, getPagination } = require('../utils/helpers');
-const BillingController = {
-  async generateInvoice(req, res) {
-    const merchant_id = req.params.merchant_id || req.user.id;
-    const year  = parseInt(req.body.year  || new Date().getFullYear());
-    const month = parseInt(req.body.month || new Date().getMonth() + 1);
-    const { period_start, period_end } = getMonthRange(year, month);
-    const { rows: deliveries } = await db.query("SELECT * FROM deliveries WHERE merchant_id = $1 AND status = 'completed' AND completed_at BETWEEN $2 AND $3", [merchant_id, period_start, period_end + ' 23:59:59']);
-    const totals = calculateInvoice(deliveries);
-    const { rows: [invoice] } = await db.query('INSERT INTO invoices (merchant_id, period_start, period_end, total_routes, total_stops, total_miles, subtotal, tax, total) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT DO NOTHING RETURNING *', [merchant_id, period_start, period_end, totals.total_routes, totals.total_stops, totals.total_miles, totals.subtotal, totals.tax, totals.total]);
-    res.json({ invoice: invoice || totals, deliveries, period: { year, month, period_start, period_end } });
-  },
-  async listInvoices(req, res) {
-    const merchant_id = req.params.merchant_id || req.user.id;
-    const { limit, offset } = getPagination(req.query);
-    const { rows } = await db.query('SELECT * FROM invoices WHERE merchant_id = $1 ORDER BY period_start DESC LIMIT $2 OFFSET $3', [merchant_id, limit, offset]);
-    res.json({ invoices: rows, count: rows.length });
-  },
-  async markPaid(req, res) {
-    const { rows: [invoice] } = await db.query("UPDATE invoices SET status = 'paid', paid_at = NOW() WHERE id = $1 RETURNING *", [req.params.invoice_id]);
-    if (!invoice) return res.status(404).json({ error: 'Not found' });
-    res.json(invoice);
-  },
-};
-module.exports = BillingController;
+const db=require('../config/db');
+const {asyncHandler,getMonthRange}=require('../utils/helpers');
+const {calculateInvoice}=require('../services/pricing');
+exports.listInvoices=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT * FROM invoices WHERE merchant_id=$1 ORDER BY created_at DESC',[req.user.id]); res.json(rows); });
+exports.getInvoice=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT * FROM invoices WHERE id=$1 AND merchant_id=$2',[req.params.id,req.user.id]); if(!rows.length) return res.status(404).json({error:'Not found'}); res.json(rows[0]); });
+exports.generateInvoice=asyncHandler(async(req,res)=>{
+  const {merchant_id,year,month}=req.body;
+  const {period_start,period_end}=getMonthRange(year,month);
+  const {rows:ds}=await db.query('SELECT * FROM deliveries WHERE merchant_id=$1 AND status=$2 AND created_at BETWEEN $3 AND $4',[merchant_id,'delivered',period_start,period_end]);
+  const c=calculateInvoice(ds);
+  const {rows:[inv]}=await db.query('INSERT INTO invoices(merchant_id,period_start,period_end,total_routes,total_stops,subtotal,tax,total)VALUES($1,$2,$3,$4,$5,$6,$7,$8)RETURNING *',[merchant_id,period_start,period_end,c.total_routes,c.total_stops,c.subtotal,c.tax,c.total]);
+  res.status(201).json(inv);
+});
+exports.adminListAll=asyncHandler(async(req,res)=>{ const {rows}=await db.query('SELECT i.*,m.name as merchant_name FROM invoices i JOIN merchants m ON m.id=i.merchant_id ORDER BY i.created_at DESC LIMIT 100'); res.json(rows); });

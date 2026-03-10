@@ -1,10 +1,8 @@
-const router = require('express').Router();
-const BillingController = require('../controllers/billing.controller');
-const auth = require('../middleware/auth');
-const { asyncHandler } = require('../utils/helpers');
-router.post('/invoice',  auth(['merchant']), asyncHandler(BillingController.generateInvoice));
-router.get('/invoices',  auth(['merchant']), asyncHandler(BillingController.listInvoices));
-router.post('/:merchant_id/invoice',      auth(['admin']), asyncHandler(BillingController.generateInvoice));
-router.get('/:merchant_id/invoices',      auth(['admin']), asyncHandler(BillingController.listInvoices));
-router.patch('/invoices/:invoice_id/pay', auth(['admin']), asyncHandler(BillingController.markPaid));
-module.exports = router;
+const r=require('express').Router();
+const ctrl=require('../controllers/billing.controller');
+const {authenticate}=require('../middleware/auth');
+r.get('/invoices',authenticate(['merchant']),ctrl.listInvoices);
+r.get('/invoices/:id',authenticate(['merchant']),ctrl.getInvoice);
+r.post('/invoices/generate',authenticate(['admin']),ctrl.generateInvoice);
+r.get('/admin/all',authenticate(['admin']),ctrl.adminListAll);
+module.exports=r;

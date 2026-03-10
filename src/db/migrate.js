@@ -1,11 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-const db = require('../config/db');
-async function migrate() {
-  console.log('Running YOBU migrations...');
-  const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
-  try { await db.query(sql); console.log('Migration complete'); }
-  catch (err) { console.error('Migration failed:', err.message); process.exit(1); }
-  finally { await db.pool.end(); }
-}
-migrate();
+require('../config/env');
+const fs=require('fs'),path=require('path'),db=require('../config/db');
+(async()=>{ console.log('Running migrations...'); const sql=fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8'); await db.query(sql); console.log('Migrations complete'); process.exit(0); })().catch(e=>{console.error(e);process.exit(1);});

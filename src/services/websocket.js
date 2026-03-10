@@ -1,29 +1,11 @@
-const { WebSocketServer } = require('ws');
-const subscribers = new Map();
-function initWebSocket(server) {
-  const wss = new WebSocketServer({ server });
-  wss.on('connection', (ws) => {
-    let subDriver = null;
-    ws.on('message', (data) => {
-      try {
-        const msg = JSON.parse(data);
-        if (msg.type === 'subscribe_driver') {
-          subDriver = msg.driver_id;
-          if (!subscribers.has(subDriver)) subscribers.set(subDriver, new Set());
-          subscribers.get(subDriver).add(ws);
-          ws.send(JSON.stringify({ type: 'subscribed', driver_id: subDriver }));
-        }
-      } catch {}
-    });
-    ws.on('close', () => { if (subDriver) subscribers.get(subDriver)?.delete(ws); });
+const {WebSocketServer}=require('ws');
+const setupWebSocket=(server,app)=>{
+  const wss=new WebSocketServer({server});
+  const subs=new Map();
+  wss.on('connection',ws=>{
+    ws.on('message',raw=>{ try{ const m=JSON.parse(raw); if(m.type==='subscribe_driver'){ if(!subs.has(m.driver_id)) subs.set(m.driver_id,new Set()); subs.get(m.driver_id).add(ws); ws.send(JSON.stringify({type:'subscribed',driver_id:m.driver_id})); } }catch{} });
+    ws.on('close',()=>subs.forEach(s=>s.delete(ws)));
   });
-  server._broadcast = (driver_id, location) => {
-    const clients = subscribers.get(driver_id);
-    if (!clients) return;
-    const msg = JSON.stringify({ type: 'location', driver_id, ...location });
-    clients.forEach(c => { if (c.readyState === 1) c.send(msg); });
-  };
-  console.log('WebSocket server initialized');
-  return wss;
-}
-module.exports = { initWebSocket };
+  app.locals.broadcast=(driverId,data)=>{ const s=subs.get(driverId); if(!s) return; const msg=JSON.stringify({type:'location',driver_id:driverId,...data}); s.forEach(ws=>{if(ws.readyState===1)ws.send(msg);}); };
+};
+module.exports={setupWebSocket};
