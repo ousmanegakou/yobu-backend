@@ -14,10 +14,12 @@ app.use(helmet()); app.use(cors()); app.use(morgan('dev')); app.use(express.json
 app.get('/health', (req, res) => res.json({ status: 'ok', project: 'YOBU', version: '1.0.0' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/routes', deliveryRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/merchants', merchantRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/scan', trackingRoutes);
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 app.use(errorHandler);
 module.exports = app;
