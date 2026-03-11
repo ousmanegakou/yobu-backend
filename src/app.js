@@ -22,4 +22,4 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/scan', trackingRoutes);
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 app.use(errorHandler);
-module.exports = app;
+module.exports = app;// v1.0.1
